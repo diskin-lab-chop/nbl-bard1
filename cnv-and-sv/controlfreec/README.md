@@ -1,4 +1,4 @@
-Visualize acquired CNVs with Control-FREEC
+# Visualize acquired CNVs with Control-FREEC
 
 Software Used:
 - Control-FREEC v11.5 - executed on the CAVATICA platform (https://www.cavatica.org/) using a public Seven Bridges workflow (app ID: admin/sbg-public-data/control-freec-11-5, revision 4) 
