@@ -1,0 +1,311 @@
+---
+title: "Mutational Signatures"
+output: 
+  html_notebook:
+    toc: TRUE
+    toc_float: TRUE
+author: Jo Lynne Rokita
+date: 2022
+editor_options: 
+  chunk_output_type: inline
+---
+
+**Purpose:**
+
+Calculate and plot mutational signatures for all samples using [COSMIC signatures](https://cancer.sanger.ac.uk/cosmic) and 
+[Alexandrov et al, 2013](https://www.ncbi.nlm.nih.gov/pubmed/23945592) mutational signatures. 
+
+
+#### Usage
+
+To run this from the command line, use:
+```
+Rscript -e "rmarkdown::render('mutational-signatures/bard1_mut_sig.Rmd', clean = TRUE)"
+```
+
+_This assumes you are in the top directory of the repository._
+
+## Setup
+
+#### Packages and functions
+
+Import necessary functions.
+
+```{r}
+# load libaries
+library(deconstructSigs)
+library(BSgenome.Hsapiens.UCSC.hg19)
+library(tidyverse)
+library(ComplexHeatmap)
+```
+
+Set up directory paths. 
+
+```{r}
+root_dir <- rprojroot::find_root(rprojroot::has_dir(".git"))
+analysis_dir <- file.path(root_dir, "mutational-signatures")
+results_dir <- file.path(analysis_dir, "results")
+plots_dir <- file.path(analysis_dir, "plots")
+input_dir <- file.path(analysis_dir, "input")
+```
+
+Make new directories for the results. 
+
+```{r}
+if (!dir.exists(results_dir)) {
+  dir.create(results_dir)
+}
+if (!dir.exists(plots_dir)) {
+  dir.create(plots_dir, recursive = TRUE)
+}
+```
+
+## Read in data
+
+Read in the MAF and signature matrices. 
+
+```{r}
+# filtered maf
+maf_file <- file.path(input_dir, "IMR5-merge.MuTect2.filtered.PASSorClusteredEvents.final.maf")
+# read in file
+maf <- data.table::fread(maf_file, data.table = FALSE)
+
+# read in signature matrices
+# SBS
+cosmic_sbs_3.3 <- read.table(file.path(input_dir, "COSMIC_v3.3.1_SBS_GRCh37.txt"), sep="\t", head=T, stringsAsFactors = F)
+rownames(cosmic_sbs_3.3) <- cosmic_sbs_3.3$Type
+cosmic_sbs_3.3$Type <- NULL
+cosmic_sbs_3.3 <- as.data.frame(t(as.matrix(cosmic_sbs_3.3)))
+
+# DBS
+cosmic_dbs_3.3 <- read.table(file.path(input_dir, "COSMIC_v3.3_DBS_GRCh37.txt"), sep="\t", head=T, stringsAsFactors = F)
+rownames(cosmic_dbs_3.3) <- cosmic_dbs_3.3$Type
+cosmic_dbs_3.3$Type <- NULL
+cosmic_dbs_3.3 <- as.data.frame(t(as.matrix(cosmic_dbs_3.3)))
+
+# INDEL
+cosmic_id_3.3 <- read.table(file.path(input_dir, "COSMIC_v3.3_ID_GRCh37.txt"), sep="\t", head=T, stringsAsFactors = F)
+rownames(cosmic_id_3.3) <- cosmic_id_3.3$Type
+cosmic_id_3.3$Type <- NULL
+cosmic_id_3.3 <- as.data.frame(t(as.matrix(cosmic_id_3.3)))
+
+```
+
+Make mutation data into `deconstructSigs` input format.
+
+```{r}
+# Convert to deconstructSigs input - filtered
+sigs_input <- mut.to.sigs.input(
+  mut.ref = maf,
+  sample.id = "Tumor_Sample_Barcode",
+  chr = "Chromosome",
+  pos = "Start_Position",
+  ref = "Reference_Allele",
+  alt = "Allele",
+  bsg = BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
+)
+
+```
+
+## Determine Signatures for COSMIC and Alexandrov et al, 2013
+
+Get list of tumor sample ids. 
+
+```{r}
+  sample_ids <- maf %>%
+  dplyr::filter(Tumor_Sample_Barcode %in% rownames(sigs_input)) %>%
+  dplyr::distinct(Tumor_Sample_Barcode) %>%
+  dplyr::pull(Tumor_Sample_Barcode)
+```
+
+Get [COSMIC V2 signatures](https://cancer.sanger.ac.uk/cosmic) for each sample.
+This step will take some time. 
+
+```{r}
+# determine the signatures contributing to each samples
+cosm_types <- list("v2_sbs" = signatures.cosmic, "v3.3_sbs" = cosmic_sbs_3.3, "v3.3_dbs" = cosmic_dbs_3.3, "v3.3_id" = cosmic_id_3.3)
+
+  for (sig_type in cosm_types) {
+    cosmic_weights = data.frame()
+    for (each in sample_ids) {
+  
+  sig_result = whichSignatures(tumor.ref = sigs_input, 
+                         signatures.ref = sig_type,
+                         sample.id = each, 
+                         contexts.needed = TRUE,
+                         tri.counts.method = 'genome')
+
+  weights_df <- as.data.frame(sig_result$weights)
+  weights_df$Line <- rownames(weights_df)
+  # add unknown contributions
+  weights_df$Unknown <- weights_df$unknown
+  # add vector to a dataframe
+  cosmic_weights <- rbind(cosmic_weights, weights_df)
+    }
+
+  # remove period for plotting
+  names(cosmic_weights) <- gsub(".", " ", names(cosmic_weights), fixed = TRUE)
+  cosmic_weights_mod <- cosmic_weights %>%
+  # update labels
+  mutate(Line = case_when(Line == "IMR5-WT" ~ "Control",
+                        Line == "IMR5-E287" ~ "E287fs",
+                        Line == "IMR5-R112" ~ "R112*",
+                        Line == "IMR5-R150" ~ "R150*",
+                        TRUE ~ Line)) %>%
+    arrange(Line) %>%
+  select(Line, 1:ncol(cosmic_weights_mod)-1) %>%
+  write_tsv(paste(results_dir, "/", names(cosm_types)[i], "-signature-exposures.tsv", sep = ""))
+  print(cosmic_weights_mod)
+  }
+
+
+```
+
+Get [Alexandrov et al, 2013](https://www.ncbi.nlm.nih.gov/pubmed/23945592) signatures for each sample.
+
+```{r}
+# determine the signatures contributing to each samples
+nature_weights = data.frame()
+
+for (each in sample_ids) {
+  
+  nat_sig_result = whichSignatures(tumor.ref = sigs_input, 
+                         signatures.ref = signatures.nature2013,
+                         sample.id = each, 
+                         contexts.needed = TRUE,
+                         tri.counts.method = 'genome')
+
+  nat_weights_df <- as.data.frame(nat_sig_result$weights)
+  nat_weights_df$Line <- rownames(nat_weights_df)
+  # add unknown contributions
+  nat_weights_df$Unknown <- nat_weights_df$unknown
+  # add vector to a dataframe
+  nature_weights <- rbind(nature_weights, nat_weights_df)
+}
+
+# remove period for plotting
+names(nature_weights) <- gsub(".", " ", names(nature_weights), fixed = TRUE)
+nature_weights_mod <- nature_weights %>%
+  # update labels
+  mutate(Line = case_when(Line == "IMR5-WT" ~ "Control",
+                        Line == "IMR5-E287" ~ "E287fs",
+                        Line == "IMR5-R112" ~ "R112*",
+                        Line == "IMR5-R150" ~ "R150*",
+                        TRUE ~ Line)) %>%
+    arrange(Line) %>%
+  select(Line, 1:ncol(nature_weights)-1) %>%
+write_tsv(paste(results_dir, "all-nature-signature-exposures.tsv", sep = ""))
+nature_weights_mod
+```
+
+## Heatmaps
+```{r}
+### COSMIC
+# create matrix
+sigs <- cosmic_weights_mod
+rownames(sigs) <- paste0(sigs$Line)
+sigs$Line <- NULL
+# remove if colSums = 0 & unknown sig
+sigs <- sigs %>% 
+  select_if(function(col) is.numeric(col) && sum(col) > 0)
+sigs <- as.matrix(sigs)
+  
+  # Make heatmap without legends
+  heat_plot <- Heatmap(sigs, 
+                       col = colorRampPalette(c("whitesmoke", "navy"), bias = 2)(50),
+                       cluster_rows = FALSE,
+                       show_row_names = TRUE,
+                       show_heatmap_legend=FALSE,
+                       cluster_columns = FALSE,
+                       #right_annotation = row_anno,
+                       rect_gp = gpar(col = "white"),
+                       row_title = NULL, 
+                       column_title = "COSMIC Mutational Signature Weights", 
+                       column_title_side = "bottom")
+heat_plot
+
+dev.set(dev.next())
+# save heatmap 
+  pdf(file.path(plots_dir, "bard1_line_cosmic_sigs.pdf"), width = 6, height = 4)
+  print(heat_plot)
+  dev.off()
+  
+
+### NATURE
+# create matrix
+sigs <- nature_weights_mod
+rownames(sigs) <- paste0(sigs$Line)
+sigs$Line <- NULL
+# remove if colSums = 0 and remove unknown sig
+sigs <- sigs %>% 
+  select_if(function(col) is.numeric(col) && sum(col) > 0)
+sigs <- as.matrix(sigs)
+  
+  # Make heatmap without legends
+  heat_plot <- Heatmap(sigs, 
+                       col = colorRampPalette(c("whitesmoke", "navy"), bias = 2)(50),
+                       cluster_rows = FALSE,
+                       show_row_names = TRUE,
+                       show_heatmap_legend=FALSE,
+                       cluster_columns = FALSE,
+                       #right_annotation = row_anno,
+                       rect_gp = gpar(col = "white"),
+                       row_title = NULL, 
+                       column_title = "Nature Mutational Signature Weights", 
+                       column_title_side = "bottom")
+  
+  heat_plot
+  
+dev.set(dev.next())
+# save heatmap 
+  pdf(file.path(plots_dir, "bard1_line_nature_sigs.pdf"), width = 6, height = 4)
+  print(heat_plot)
+  dev.off()
+
+```
+
+# test v3.3
+```{r}
+# determine the signatures contributing to each samples
+v3 <- t(read_tsv(file.path(input_dir, "COSMIC_v3.3.1_SBS_GRCh37.txt")))
+colnames(v3) <- v3["Type",]
+v3 <- v3[!(row.names(v3) == "Type"),]
+v3 <- as.data.frame(v3)
+
+cosmicv3_weights = data.frame()
+
+for (each in sample_ids) {
+  
+  cosmv3_sig_result = whichSignatures(tumor.ref = sigs_input, 
+                         signatures.ref = v3,
+                         sample.id = each, 
+                         contexts.needed = TRUE,
+                         tri.counts.method = 'genome')
+
+  cosmv3_weights_df <- as.data.frame(cosmv3_sig_result$weights)
+  cosmv3_weights_df$Line <- rownames(cosmv3_weights_df)
+  # add vector to a dataframe
+  cosmicv3_weights <- rbind(cosmicv3_weights, cosmv3_weights_df)
+}
+
+# remove period for plotting
+names(cosmicv3_weights) <- gsub(".", " ", names(cosmicv3_weights), fixed = TRUE)
+cosmicv3_weights_mod <- cosmicv3_weights %>%
+  # update labels
+  mutate(Line = case_when(Line == "IMR5-WT" ~ "Control",
+                        Line == "IMR5-E287" ~ "E287fs",
+                        Line == "IMR5-R112" ~ "R112*",
+                        Line == "IMR5-R150" ~ "R150*",
+                        TRUE ~ Line)) %>%
+    arrange(Line) %>%
+  select(Line, 1:ncol(cosmicv3_weights)-1) #%>%
+#write_tsv(paste(results_dir, "all-cosmv3-signature-exposures.tsv", sep = ""))
+#cosmicv3_weights_mod
+```
+
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
