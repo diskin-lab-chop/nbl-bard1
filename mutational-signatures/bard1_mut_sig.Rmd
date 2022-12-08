@@ -161,10 +161,79 @@ cosm_types <- list("v2_sbs" = signatures.cosmic, "v3.3_sbs" = cosmic_sbs_3.3)
   write_tsv(paste(results_dir, "/", sig_type, "-signature-exposures.tsv", sep = ""))
   print(cosmic_weights_mod)
 
+  
+### COSMIC
+# create matrix
+sigs <- cosmic_weights_mod
+rownames(sigs) <- paste0(sigs$Line)
+sigs$Line <- NULL
+# remove if colSums = 0 & unknown sig
+sigs <- sigs %>% 
+  select_if(function(col) is.numeric(col) && sum(col) > 0)
+sigs <- as.matrix(sigs)
+  
+  # Make heatmap without legends
+  heat_plot <- Heatmap(sigs, 
+                       col = colorRampPalette(c("whitesmoke", "navy"), bias = 2)(50),
+                       cluster_rows = FALSE,
+                       show_row_names = TRUE,
+                       show_heatmap_legend=FALSE,
+                       cluster_columns = FALSE,
+                       #right_annotation = row_anno,
+                       rect_gp = gpar(col = "white"),
+                       row_title = NULL, 
+                       column_title = paste("COSMIC ", sig_type, " Mutational Signature Weights"), 
+                       column_title_side = "bottom")
+heat_plot
+
+dev.set(dev.next())
+# save heatmap 
+  pdf(file.path(paste(plots_dir, "/cosmic_", sig_type, "_sigs.pdf", sep = "")), width = 6, height = 4)
+  print(heat_plot)
+  dev.off()
+  
   }
 
 
 ```
+
+# Look at specific signatures
+```{r DNA repair sigs}
+
+cosmic_weights = data.frame()
+    for (each in sample_ids) {
+  
+  sig_result = whichSignatures(tumor.ref = sigs_input, 
+                         signatures.ref = cosm_types[["v3.3_sbs"]],
+                         sample.id = each, 
+                         contexts.needed = TRUE,
+                         tri.counts.method = 'genome', 
+                         associated = dna_repair)
+
+  weights_df <- as.data.frame(sig_result$weights)
+  weights_df$Line <- rownames(weights_df)
+  # add unknown contributions
+  weights_df$Unknown <- weights_df$unknown
+  # add vector to a dataframe
+  cosmic_weights <- rbind(cosmic_weights, weights_df)
+    }
+
+  # remove period for plotting
+  names(cosmic_weights) <- gsub(".", " ", names(cosmic_weights), fixed = TRUE)
+  cosmic_weights_mod <- cosmic_weights %>%
+  # update labels
+  mutate(Line = case_when(Line == "IMR5-WT" ~ "Control",
+                        Line == "IMR5-E287" ~ "E287fs",
+                        Line == "IMR5-R112" ~ "R112*",
+                        Line == "IMR5-R150" ~ "R150*",
+                        TRUE ~ Line)) %>%
+    arrange(Line) %>%
+  select(Line, 1:ncol(cosmic_weights)-1) %>%
+  write_tsv(paste(results_dir, "/", sig_type, "-DNArepair-signature-exposures.tsv", sep = ""))
+  print(cosmic_weights_mod)
+  
+```
+
 
 Get [Alexandrov et al, 2013](https://www.ncbi.nlm.nih.gov/pubmed/23945592) signatures for each sample.
 
@@ -205,37 +274,6 @@ nature_weights_mod
 
 ## Heatmaps
 ```{r}
-### COSMIC
-# create matrix
-sigs <- cosmic_weights_mod
-rownames(sigs) <- paste0(sigs$Line)
-sigs$Line <- NULL
-# remove if colSums = 0 & unknown sig
-sigs <- sigs %>% 
-  select_if(function(col) is.numeric(col) && sum(col) > 0)
-sigs <- as.matrix(sigs)
-  
-  # Make heatmap without legends
-  heat_plot <- Heatmap(sigs, 
-                       col = colorRampPalette(c("whitesmoke", "navy"), bias = 2)(50),
-                       cluster_rows = FALSE,
-                       show_row_names = TRUE,
-                       show_heatmap_legend=FALSE,
-                       cluster_columns = FALSE,
-                       #right_annotation = row_anno,
-                       rect_gp = gpar(col = "white"),
-                       row_title = NULL, 
-                       column_title = "COSMIC Mutational Signature Weights", 
-                       column_title_side = "bottom")
-heat_plot
-
-dev.set(dev.next())
-# save heatmap 
-  pdf(file.path(plots_dir, "bard1_line_cosmic_sigs.pdf"), width = 6, height = 4)
-  print(heat_plot)
-  dev.off()
-  
-
 ### NATURE
 # create matrix
 sigs <- nature_weights_mod
