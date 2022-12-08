@@ -1,12 +1,15 @@
 ---
 title: "Mutational Signatures"
-output: 
+author: "Jo Lynne Rokita"
+date: "2022"
+output:
+  html_document:
+    toc: yes
+    df_print: paged
   html_notebook:
-    toc: TRUE
-    toc_float: TRUE
-author: Jo Lynne Rokita
-date: 2022
-editor_options: 
+    toc: yes
+    toc_float: yes
+editor_options:
   chunk_output_type: inline
 ---
 
@@ -96,8 +99,10 @@ cosmic_id_3.3 <- as.data.frame(t(as.matrix(cosmic_id_3.3)))
 Make mutation data into `deconstructSigs` input format.
 
 ```{r}
-# Convert to deconstructSigs input - filtered
-sigs_input <- mut.to.sigs.input(
+# Convert to deconstructSigs input - filtered MAF
+
+# SBS input
+sigs_input_sbs <- mut.to.sigs.input(
   mut.ref = maf,
   sample.id = "Tumor_Sample_Barcode",
   chr = "Chromosome",
@@ -105,6 +110,18 @@ sigs_input <- mut.to.sigs.input(
   ref = "Reference_Allele",
   alt = "Allele",
   bsg = BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19
+)
+
+# DBS input
+sigs_input_dbs <- mut.to.sigs.input(
+  mut.ref = maf,
+  sample.id = "Tumor_Sample_Barcode",
+  chr = "Chromosome",
+  pos = "Start_Position",
+  ref = "Reference_Allele",
+  alt = "Allele",
+  bsg = BSgenome.Hsapiens.UCSC.hg19::BSgenome.Hsapiens.UCSC.hg19,
+  sig.type = "DBS"
 )
 
 ```
@@ -115,7 +132,7 @@ Get list of tumor sample ids.
 
 ```{r}
   sample_ids <- maf %>%
-  dplyr::filter(Tumor_Sample_Barcode %in% rownames(sigs_input)) %>%
+  dplyr::filter(Tumor_Sample_Barcode %in% rownames(sigs_input_sbs)) %>%
   dplyr::distinct(Tumor_Sample_Barcode) %>%
   dplyr::pull(Tumor_Sample_Barcode)
 ```
@@ -125,11 +142,22 @@ This step will take some time.
 
 ```{r}
 # determine the signatures contributing to each samples
-"v3.3_dbs" = cosmic_dbs_3.3
-"v3.3_id" = cosmic_id_3.3
-cosm_types <- list("v2_sbs" = signatures.cosmic, "v3.3_sbs" = cosmic_sbs_3.3)
+
+# "v3.3_id" = cosmic_id_3.3
+cosm_types <- list("v3.3_dbs" = cosmic_dbs_3.3, "v2_sbs" = signatures.cosmic, "v3.3_sbs" = cosmic_sbs_3.3)
 
   for (sig_type in names(cosm_types)) {
+  
+    # Convert to deconstructSigs input - filtered
+    
+    if (sig_type == "v3.3_dbs"){
+      sigs_input <- sigs_input_dbs
+    }
+    
+    else if (sig_type %in% c("v2_sbs", "v3.3_sbs")){
+      sigs_input <- sigs_input_sbs
+    }
+    
     cosmic_weights = data.frame()
     for (each in sample_ids) {
   
@@ -299,7 +327,7 @@ nature_weights_mod <- nature_weights %>%
                         TRUE ~ Line)) %>%
     arrange(Line) %>%
   select(Line, 1:ncol(nature_weights)-1) %>%
-write_tsv(paste(results_dir, "nature-signature-exposures.tsv", sep = ""))
+write_tsv(paste(results_dir, "/nature-signature-exposures.tsv", sep = ""))
 nature_weights_mod
 ```
 
