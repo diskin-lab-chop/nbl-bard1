@@ -136,8 +136,7 @@ cosm_types <- list("v2_sbs" = signatures.cosmic, "v3.3_sbs" = cosmic_sbs_3.3)
   sig_result = whichSignatures(tumor.ref = sigs_input, 
                          signatures.ref = cosm_types[[sig_type]],
                          sample.id = each, 
-                         contexts.needed = TRUE,
-                         tri.counts.method = 'genome')
+                         contexts.needed = TRUE)
 
   weights_df <- as.data.frame(sig_result$weights)
   weights_df$Line <- rownames(weights_df)
@@ -211,7 +210,6 @@ for (each in sample_ids) {
                          signatures.ref = cosm_types[["v3.3_sbs"]],
                          sample.id = each, 
                          contexts.needed = TRUE,
-                         tri.counts.method = 'genome', 
                          associated = dna_repair)
 
   weights_df <- as.data.frame(sig_result$weights)
@@ -280,8 +278,7 @@ for (each in sample_ids) {
   nat_sig_result = whichSignatures(tumor.ref = sigs_input, 
                          signatures.ref = signatures.nature2013,
                          sample.id = each, 
-                         contexts.needed = TRUE,
-                         tri.counts.method = 'genome')
+                         contexts.needed = TRUE)
 
   nat_weights_df <- as.data.frame(nat_sig_result$weights)
   nat_weights_df$Line <- rownames(nat_weights_df)
@@ -302,7 +299,7 @@ nature_weights_mod <- nature_weights %>%
                         TRUE ~ Line)) %>%
     arrange(Line) %>%
   select(Line, 1:ncol(nature_weights)-1) %>%
-write_tsv(paste(results_dir, "all-nature-signature-exposures.tsv", sep = ""))
+write_tsv(paste(results_dir, "nature-signature-exposures.tsv", sep = ""))
 nature_weights_mod
 ```
 
@@ -335,49 +332,10 @@ sigs <- as.matrix(sigs)
   
 dev.set(dev.next())
 # save heatmap 
-  pdf(file.path(plots_dir, "bard1_line_nature_sigs.pdf"), width = 6, height = 4)
+  pdf(file.path(plots_dir, "nature_sigs.pdf"), width = 6, height = 4)
   print(heat_plot)
   dev.off()
 
-```
-
-# test v3.3
-```{r}
-# determine the signatures contributing to each samples
-v3 <- t(read_tsv(file.path(input_dir, "COSMIC_v3.3.1_SBS_GRCh37.txt")))
-colnames(v3) <- v3["Type",]
-v3 <- v3[!(row.names(v3) == "Type"),]
-v3 <- as.data.frame(v3)
-
-cosmicv3_weights = data.frame()
-
-for (each in sample_ids) {
-  
-  cosmv3_sig_result = whichSignatures(tumor.ref = sigs_input, 
-                         signatures.ref = v3,
-                         sample.id = each, 
-                         contexts.needed = TRUE,
-                         tri.counts.method = 'genome')
-
-  cosmv3_weights_df <- as.data.frame(cosmv3_sig_result$weights)
-  cosmv3_weights_df$Line <- rownames(cosmv3_weights_df)
-  # add vector to a dataframe
-  cosmicv3_weights <- rbind(cosmicv3_weights, cosmv3_weights_df)
-}
-
-# remove period for plotting
-names(cosmicv3_weights) <- gsub(".", " ", names(cosmicv3_weights), fixed = TRUE)
-cosmicv3_weights_mod <- cosmicv3_weights %>%
-  # update labels
-  mutate(Line = case_when(Line == "IMR5-WT" ~ "Control",
-                        Line == "IMR5-E287" ~ "E287fs",
-                        Line == "IMR5-R112" ~ "R112*",
-                        Line == "IMR5-R150" ~ "R150*",
-                        TRUE ~ Line)) %>%
-    arrange(Line) %>%
-  select(Line, 1:ncol(cosmicv3_weights)-1) #%>%
-#write_tsv(paste(results_dir, "all-cosmv3-signature-exposures.tsv", sep = ""))
-#cosmicv3_weights_mod
 ```
 
 
