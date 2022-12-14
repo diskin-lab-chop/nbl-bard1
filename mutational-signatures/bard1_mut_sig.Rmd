@@ -164,7 +164,9 @@ cosm_types <- list("v3.3_dbs" = cosmic_dbs_3.3, "v2_sbs" = signatures.cosmic, "v
   sig_result = whichSignatures(tumor.ref = sigs_input, 
                          signatures.ref = cosm_types[[sig_type]],
                          sample.id = each, 
-                         contexts.needed = TRUE)
+                         contexts.needed = TRUE, 
+                         tri.counts.method = "genome",
+                         signature.cutoff = 0.06)
 
   weights_df <- as.data.frame(sig_result$weights)
   weights_df$Line <- rownames(weights_df)
@@ -213,10 +215,33 @@ sigs <- as.matrix(sigs)
                        column_title_side = "bottom")
 heat_plot
 
+  # Also create stacked plot
+sig_names <- colnames(sigs)
+sigs_df <- as.data.frame(sigs)
+sigs_df$Line <- rownames(sigs_df)
+
+# make long df
+sigs_df_long <- sigs_df %>% pivot_longer(cols=sig_names,
+                    names_to='Signature',
+                    values_to='Exposure') 
+
+# reorder levels so that signature 3 is on the bottom
+#sigs_df_long$Signature <- factor(sigs_df_long$Signature, levels = c("Signature 1A", "Signature 1B", "Signature 3", "Signature 4", "Signature 6", "Signature 7", "Signature 9", "Signature 10", "Signature 15", "Signature U1"))
+stacked_plot <- ggplot(sigs_df_long, aes(fill=Signature, y=Exposure, x=Line)) + 
+  geom_col(position = "fill") +
+  scale_fill_brewer(palette="Set3") +
+  xlab("Cell Line") +
+  ylab(paste("COSMIC ", sig_type, " Mutational Signature Weights")) +
+  theme_classic()
+
+stacked_plot
+
+
 dev.set(dev.next())
 # save heatmap 
   pdf(file.path(paste(plots_dir, "/cosmic_", sig_type, "_sigs.pdf", sep = "")), width = 6, height = 4)
   print(heat_plot)
+  print(stacked_plot)
   dev.off()
   
   }
@@ -238,12 +263,12 @@ for (each in sample_ids) {
                          signatures.ref = cosm_types[["v3.3_sbs"]],
                          sample.id = each, 
                          contexts.needed = TRUE,
-                         associated = dna_repair)
+                         associated = dna_repair,
+                         tri.counts.method = "genome",
+                         signature.cutoff = 0.06)
 
   weights_df <- as.data.frame(sig_result$weights)
   weights_df$Line <- rownames(weights_df)
-  # add unknown contributions
-  weights_df$Unknown <- weights_df$unknown
   # add vector to a dataframe
   cosmic_weights <- rbind(cosmic_weights, weights_df)
     }
@@ -283,15 +308,38 @@ sigs <- as.matrix(sigs)
                        #right_annotation = row_anno,
                        rect_gp = gpar(col = "white"),
                        row_title = NULL, 
-                       column_title = paste("COSMIC v3.3 Mutational Signature Weights"), 
+                       column_title = paste("COSMIC v3.3 DNA Repair Mutational Signature Weights"), 
                        column_title_side = "bottom")
 heat_plot
+
+# Also create stacked plot
+sig_names <- colnames(sigs)
+sigs_df <- as.data.frame(sigs)
+sigs_df$Line <- rownames(sigs_df)
+
+# make long df
+sigs_df_long <- sigs_df %>% pivot_longer(cols=sig_names,
+                    names_to='Signature',
+                    values_to='Exposure') 
+
+# reorder levels so that signature 3 is on the bottom
+sigs_df_long$Signature <- factor(sigs_df_long$Signature, levels = c("SBS10b", "SBS26", "SBS36", "SBS6", "SBS3"))
+
+stacked_plot <- ggplot(sigs_df_long, aes(fill=Signature, y=Exposure, x=Line)) + 
+  geom_col(position = "fill") +
+  scale_fill_brewer(palette="Set3") +
+  xlab("Cell Line") +
+  ylab("COSMIC SBS v3.3 Mutational Signature Weights") +
+  theme_classic()
+
+stacked_plot
 
 dev.set(dev.next())
 # save heatmap 
   pdf(file.path(paste(plots_dir, "/cosmic_v3.3_dnarepair_sigs.pdf", sep = "")), width = 6, height = 4)
   print(heat_plot)
-  dev.off()    
+  print(stacked_plot)
+  dev.off() 
 ```
 
 
@@ -306,7 +354,9 @@ for (each in sample_ids) {
   nat_sig_result = whichSignatures(tumor.ref = sigs_input, 
                          signatures.ref = signatures.nature2013,
                          sample.id = each, 
-                         contexts.needed = TRUE)
+                         contexts.needed = TRUE,
+                         tri.counts.method = "genome",
+                         signature.cutoff = 0.06)
 
   nat_weights_df <- as.data.frame(nat_sig_result$weights)
   nat_weights_df$Line <- rownames(nat_weights_df)
@@ -357,11 +407,34 @@ sigs <- as.matrix(sigs)
                        column_title_side = "bottom")
   
   heat_plot
-  
+
+  # Also create stacked plot
+sig_names <- colnames(sigs)
+sigs_df <- as.data.frame(sigs)
+sigs_df$Line <- rownames(sigs_df)
+
+# make long df
+sigs_df_long <- sigs_df %>% pivot_longer(cols=sig_names,
+                    names_to='Signature',
+                    values_to='Exposure') 
+
+# reorder levels so that signature 3 is on the bottom
+sigs_df_long$Signature <- factor(sigs_df_long$Signature, levels = c("Signature 1A", "Signature 1B", "Signature 3", "Signature 4", "Signature 6", "Signature 7", "Signature 9", "Signature 10", "Signature 15", "Signature U1"))
+
+stacked_plot <- ggplot(sigs_df_long, aes(fill=Signature, y=Exposure, x=Line)) + 
+  geom_col(position = "fill") +
+  scale_fill_brewer(palette="Set3") +
+  xlab("Cell Line") +
+  ylab("Nature Mutational Signature Weights") +
+  theme_classic()
+
+stacked_plot
+
 dev.set(dev.next())
 # save heatmap 
   pdf(file.path(plots_dir, "nature_sigs.pdf"), width = 6, height = 4)
   print(heat_plot)
+  print(stacked_plot)
   dev.off()
 
 ```
