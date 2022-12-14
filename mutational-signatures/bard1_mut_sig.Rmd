@@ -34,7 +34,7 @@ _This assumes you are in the top directory of the repository._
 
 Import necessary functions.
 
-```{r}
+```{r load packages}
 # load libaries
 suppressPackageStartupMessages({
 library(deconstructSigs)
@@ -46,7 +46,7 @@ library(ComplexHeatmap)
 
 Set up directory paths. 
 
-```{r}
+```{r set directory paths}
 root_dir <- rprojroot::find_root(rprojroot::has_dir(".git"))
 analysis_dir <- file.path(root_dir, "mutational-signatures")
 results_dir <- file.path(analysis_dir, "results")
@@ -56,7 +56,7 @@ input_dir <- file.path(analysis_dir, "input")
 
 Make new directories for the results. 
 
-```{r}
+```{r make diretories}
 if (!dir.exists(results_dir)) {
   dir.create(results_dir)
 }
@@ -69,7 +69,7 @@ if (!dir.exists(plots_dir)) {
 
 Read in the MAF and signature matrices. 
 
-```{r}
+```{r read in data files}
 # filtered maf
 maf_file <- file.path(input_dir, "IMR5-merge.MuTect2.filtered.PASSorClusteredEvents.final.maf")
 # read in file
@@ -96,9 +96,9 @@ cosmic_id_3.3 <- as.data.frame(t(as.matrix(cosmic_id_3.3)))
 
 ```
 
-Make mutation data into `deconstructSigs` input format.
+## Make sigs input
 
-```{r}
+```{r make sigs input}
 # Convert to deconstructSigs input - filtered MAF
 
 # SBS input
@@ -130,17 +130,18 @@ sigs_input_dbs <- mut.to.sigs.input(
 
 Get list of tumor sample ids. 
 
-```{r}
+```{r get list of sample ids}
   sample_ids <- maf %>%
   dplyr::filter(Tumor_Sample_Barcode %in% rownames(sigs_input_sbs)) %>%
   dplyr::distinct(Tumor_Sample_Barcode) %>%
   dplyr::pull(Tumor_Sample_Barcode)
 ```
 
-Get [COSMIC V2 signatures](https://cancer.sanger.ac.uk/cosmic) for each sample.
+## Run COSMIC V2 and V3.3 Signatures
+Get [COSMIC V2 and V3 signatures](https://cancer.sanger.ac.uk/cosmic) for each sample.
 This step will take some time. 
 
-```{r}
+```{r run COSMIC V2 and V3 Signatures}
 # determine the signatures contributing to each samples
 
 # "v3.3_id" = cosmic_id_3.3
@@ -249,8 +250,9 @@ dev.set(dev.next())
 
 ```
 
-# Look at specific signatures
-```{r DNA repair sigs}
+## COSMIC V3.3 DNA repair only signatures
+
+```{r COSMIC V3.3 DNA repair only sigs}
 map <- read_tsv(file.path(input_dir, "sbs_v3.3_map.tsv"))
 dna_repair <- map %>%
   filter(Broad_category == "DNA repair deficiency") %>%
@@ -343,9 +345,10 @@ dev.set(dev.next())
 ```
 
 
+## Create Nature Sig Input
 Get [Alexandrov et al, 2013](https://www.ncbi.nlm.nih.gov/pubmed/23945592) signatures for each sample.
 
-```{r}
+```{r Create NATURE sig input}
 # determine the signatures contributing to each samples
 nature_weights = data.frame()
 
@@ -381,8 +384,8 @@ write_tsv(paste(results_dir, "/nature-signature-exposures.tsv", sep = ""))
 nature_weights_mod
 ```
 
-## Heatmaps
-```{r}
+## Nature signatures
+```{r Get Nature signatures}
 ### NATURE
 # create matrix
 sigs <- nature_weights_mod
