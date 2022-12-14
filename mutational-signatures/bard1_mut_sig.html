@@ -1711,6 +1711,12 @@ maf &lt;- data.table::fread(maf_file, data.table = FALSE)
 
 # read in signature matrices
 # SBS
+cosmic_sbs_3.2 &lt;- read.table(file.path(input_dir, &quot;COSMIC_v3.2_SBS_GRCh37.txt&quot;), sep=&quot;\t&quot;, head=T, stringsAsFactors = F)
+rownames(cosmic_sbs_3.2) &lt;- cosmic_sbs_3.2$Type
+cosmic_sbs_3.2$Type &lt;- NULL
+cosmic_sbs_3.2 &lt;- as.data.frame(t(as.matrix(cosmic_sbs_3.2)))
+
+# SBS
 cosmic_sbs_3.3 &lt;- read.table(file.path(input_dir, &quot;COSMIC_v3.3.1_SBS_GRCh37.txt&quot;), sep=&quot;\t&quot;, head=T, stringsAsFactors = F)
 rownames(cosmic_sbs_3.3) &lt;- cosmic_sbs_3.3$Type
 cosmic_sbs_3.3$Type &lt;- NULL
@@ -1770,7 +1776,7 @@ signatures</a> for each sample. This step will take some time.</p>
 <pre class="r"><code># determine the signatures contributing to each samples
 
 # &quot;v3.3_id&quot; = cosmic_id_3.3
-cosm_types &lt;- list(&quot;v3.3_dbs&quot; = cosmic_dbs_3.3, &quot;v2_sbs&quot; = signatures.cosmic, &quot;v3.3_sbs&quot; = cosmic_sbs_3.3)
+cosm_types &lt;- list(&quot;v3.3_dbs&quot; = cosmic_dbs_3.3, &quot;v2_sbs&quot; = signatures.cosmic, &quot;v3.2_sbs&quot; = cosmic_sbs_3.2, &quot;v3.3_sbs&quot; = cosmic_sbs_3.3)
 
   for (sig_type in names(cosm_types)) {
   
@@ -1780,7 +1786,7 @@ cosm_types &lt;- list(&quot;v3.3_dbs&quot; = cosmic_dbs_3.3, &quot;v2_sbs&quot; 
       sigs_input &lt;- sigs_input_dbs
     }
     
-    else if (sig_type %in% c(&quot;v2_sbs&quot;, &quot;v3.3_sbs&quot;)){
+    else if (sig_type %in% c(&quot;v2_sbs&quot;, &quot;v3.2_sbs&quot;, &quot;v3.3_sbs&quot;)){
       sigs_input &lt;- sigs_input_sbs
     }
     
@@ -1926,6 +1932,46 @@ dev.set(dev.next())
 ## IMR5-E287            0            0            0   0.08345977            0
 ## IMR5-R112            0            0            0   0.00000000            0
 ## IMR5-R150            0            0            0   0.00000000            0</code></pre>
+<pre><code>##              Line       SBS1 SBS2 SBS3       SBS4       SBS5 SBS6 SBS7a SBS7b
+## IMR5-WT   Control 0.12840488    0    0 0.06917917 0.07573898    0     0     0
+## IMR5-E287  E287fs 0.14538822    0    0 0.00000000 0.17930447    0     0     0
+## IMR5-R112   R112* 0.09334654    0    0 0.00000000 0.19296196    0     0     0
+## IMR5-R150   R150* 0.00000000    0    0 0.00000000 0.24326651    0     0     0
+##           SBS7c SBS7d SBS8 SBS9 SBS10a     SBS10b SBS10c SBS10d SBS11 SBS12
+## IMR5-WT       0     0    0    0      0 0.07321446      0      0     0     0
+## IMR5-E287     0     0    0    0      0 0.00000000      0      0     0     0
+## IMR5-R112     0     0    0    0      0 0.06598374      0      0     0     0
+## IMR5-R150     0     0    0    0      0 0.11693544      0      0     0     0
+##           SBS13 SBS14      SBS15 SBS16 SBS17a SBS17b SBS18 SBS19 SBS20 SBS21
+## IMR5-WT       0     0 0.16097135     0      0      0     0     0     0     0
+## IMR5-E287     0     0 0.00000000     0      0      0     0     0     0     0
+## IMR5-R112     0     0 0.15595502     0      0      0     0     0     0     0
+## IMR5-R150     0     0 0.08795894     0      0      0     0     0     0     0
+##           SBS22 SBS23 SBS24 SBS25 SBS26 SBS27 SBS28      SBS29 SBS30 SBS31
+## IMR5-WT       0     0     0     0     0     0     0 0.00000000     0     0
+## IMR5-E287     0     0     0     0     0     0     0 0.00000000     0     0
+## IMR5-R112     0     0     0     0     0     0     0 0.09187428     0     0
+## IMR5-R150     0     0     0     0     0     0     0 0.09556358     0     0
+##           SBS32 SBS33 SBS34 SBS35 SBS36 SBS37 SBS38      SBS39 SBS40 SBS41
+## IMR5-WT       0     0     0     0     0     0     0 0.00000000     0     0
+## IMR5-E287     0     0     0     0     0     0     0 0.06387251     0     0
+## IMR5-R112     0     0     0     0     0     0     0 0.00000000     0     0
+## IMR5-R150     0     0     0     0     0     0     0 0.00000000     0     0
+##           SBS42 SBS43 SBS44 SBS45 SBS46 SBS47 SBS48 SBS49 SBS50 SBS51 SBS52
+## IMR5-WT       0     0     0     0     0     0     0     0     0     0     0
+## IMR5-E287     0     0     0     0     0     0     0     0     0     0     0
+## IMR5-R112     0     0     0     0     0     0     0     0     0     0     0
+## IMR5-R150     0     0     0     0     0     0     0     0     0     0     0
+##           SBS53 SBS54 SBS55 SBS56 SBS57 SBS58 SBS59 SBS60 SBS84 SBS85 SBS86
+## IMR5-WT       0     0     0     0     0     0     0     0     0     0     0
+## IMR5-E287     0     0     0     0     0     0     0     0     0     0     0
+## IMR5-R112     0     0     0     0     0     0     0     0     0     0     0
+## IMR5-R150     0     0     0     0     0     0     0     0     0     0     0
+##               SBS87 SBS88 SBS89 SBS90 SBS91 SBS92 SBS93 SBS94
+## IMR5-WT   0.1377551     0     0     0     0     0     0     0
+## IMR5-E287 0.1649394     0     0     0     0     0     0     0
+## IMR5-R112 0.1807750     0     0     0     0     0     0     0
+## IMR5-R150 0.1698313     0     0     0     0     0     0     0</code></pre>
 <pre><code>##              Line       SBS1 SBS2 SBS3       SBS4       SBS5 SBS6 SBS7a SBS7b
 ## IMR5-WT   Control 0.12840489    0    0 0.06917917 0.07573903    0     0     0
 ## IMR5-E287  E287fs 0.14538822    0    0 0.00000000 0.17930447    0     0     0

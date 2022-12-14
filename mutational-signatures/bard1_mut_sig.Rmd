@@ -77,6 +77,12 @@ maf <- data.table::fread(maf_file, data.table = FALSE)
 
 # read in signature matrices
 # SBS
+cosmic_sbs_3.2 <- read.table(file.path(input_dir, "COSMIC_v3.2_SBS_GRCh37.txt"), sep="\t", head=T, stringsAsFactors = F)
+rownames(cosmic_sbs_3.2) <- cosmic_sbs_3.2$Type
+cosmic_sbs_3.2$Type <- NULL
+cosmic_sbs_3.2 <- as.data.frame(t(as.matrix(cosmic_sbs_3.2)))
+
+# SBS
 cosmic_sbs_3.3 <- read.table(file.path(input_dir, "COSMIC_v3.3.1_SBS_GRCh37.txt"), sep="\t", head=T, stringsAsFactors = F)
 rownames(cosmic_sbs_3.3) <- cosmic_sbs_3.3$Type
 cosmic_sbs_3.3$Type <- NULL
@@ -145,7 +151,7 @@ This step will take some time.
 # determine the signatures contributing to each samples
 
 # "v3.3_id" = cosmic_id_3.3
-cosm_types <- list("v3.3_dbs" = cosmic_dbs_3.3, "v2_sbs" = signatures.cosmic, "v3.3_sbs" = cosmic_sbs_3.3)
+cosm_types <- list("v3.3_dbs" = cosmic_dbs_3.3, "v2_sbs" = signatures.cosmic, "v3.2_sbs" = cosmic_sbs_3.2, "v3.3_sbs" = cosmic_sbs_3.3)
 
   for (sig_type in names(cosm_types)) {
   
@@ -155,7 +161,7 @@ cosm_types <- list("v3.3_dbs" = cosmic_dbs_3.3, "v2_sbs" = signatures.cosmic, "v
       sigs_input <- sigs_input_dbs
     }
     
-    else if (sig_type %in% c("v2_sbs", "v3.3_sbs")){
+    else if (sig_type %in% c("v2_sbs", "v3.2_sbs", "v3.3_sbs")){
       sigs_input <- sigs_input_sbs
     }
     
