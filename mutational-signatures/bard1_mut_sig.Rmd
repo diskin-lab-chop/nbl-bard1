@@ -1,7 +1,7 @@
 ---
 title: "Mutational Signatures"
 author: "Jo Lynne Rokita"
-date: "2022"
+date: '2022'
 output:
   html_document:
     toc: yes
@@ -9,6 +9,8 @@ output:
   html_notebook:
     toc: yes
     toc_float: yes
+  pdf_document:
+    toc: yes
 editor_options:
   chunk_output_type: inline
 ---
@@ -476,14 +478,19 @@ for (version in  names(v_of_interest)){
 )
 
 mmsig_weights <- mmsig_fit$estimate
+mmsig_weights$sample <- rownames(mmsig_weights)
+mmsig_weights <- mmsig_weights[,c(ncol(mmsig_weights), 1:ncol(mmsig_weights)-1)]
+
 # remove underscore
 names(mmsig_weights) <- gsub("_", " ", names(mmsig_weights), fixed = TRUE)
-mmsig_weights %>%
+mmsig_weights <- mmsig_weights %>%
+  arrange(sample) %>%
 write_tsv(paste(results_dir, "/cosmic-", version, "-signature-exposures-mmsig.tsv", sep = ""))
 
 # create plots
 # create matrix
 sigs <- mmsig_weights
+sigs$sample <- NULL
 sigs$mutations <- NULL
 # remove if colSums = 0 & unknown sig
 sigs <- sigs %>% 
@@ -512,9 +519,9 @@ sigs_df$Line <- rownames(sigs_df)
 # make long df
 sigs_df_long <- sigs_df %>% pivot_longer(cols=sig_names,
                     names_to='Signature',
-                    values_to='Exposure') %>%
+                    values_to='Exposure') #%>%
   # plot only DNA repair signatures
-  filter(Signature %in% dna_repair)
+#  filter(Signature %in% dna_repair)
 
 stacked_plot <- ggplot(sigs_df_long, aes(fill=Signature, y=Exposure, x=Line)) + 
   geom_col(position = "fill") +
