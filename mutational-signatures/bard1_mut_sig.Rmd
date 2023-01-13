@@ -180,11 +180,14 @@ unknown <- map %>%
   pull(Signature)
 
 exclude_sigs <- c(artifact_sigs, therapy_sigs, environ_sigs, "SBS39")
+include_sigs <- setdiff(rownames(cosmic_sbs_3.2), exclude_sigs)
 
 # Neuroblastoma-specific expected signatures minus therapy (SBS31 is cisplatin)
 nbl_sigs <- c("SBS1", "SBS3", "SBS5", "SBS18")
+nbl_exclude <- c(exclude_sigs, unknown)
 
-include_sigs <- setdiff(rownames(cosmic_sbs_3.2), exclude_sigs)
+nbl_include_sigs <- unique(c(setdiff(rownames(cosmic_sbs_3.2), nbl_exclude), nbl_sigs))
+
 
 ```
 
@@ -216,7 +219,7 @@ cosm_types <- list("v3.2_dbs" = cosmic_dbs_3.2, "v2_sbs" = cosmic_sbs_2, "v3.2_s
     else if (sig_type == "v3.2_sbs_nbl"){
       sigs_input <- sigs_input_sbs
       normalization <- "genome"
-      sig_list <- nbl_sigs
+      sig_list <- nbl_include_sigs
     }
     
     else if (sig_type == "v3.2_sbs_39"){
