@@ -184,10 +184,11 @@ include_sigs <- setdiff(rownames(cosmic_sbs_3.2), exclude_sigs)
 
 # Neuroblastoma-specific expected signatures minus therapy (SBS31 is cisplatin)
 nbl_sigs <- c("SBS1", "SBS3", "SBS5", "SBS18")
-nbl_exclude <- c(exclude_sigs, unknown)
+nbl_include_sigs_39 <- unique(c(setdiff(rownames(cosmic_sbs_3.2), exclude_sigs), nbl_sigs))
 
-nbl_include_sigs <- unique(c(setdiff(rownames(cosmic_sbs_3.2), nbl_exclude), nbl_sigs))
-
+# also exclude unknown sigs
+nbl_exclude_22 <- c(exclude_sigs, unknown)
+nbl_include_sigs_22 <- unique(c(setdiff(rownames(cosmic_sbs_3.2), nbl_exclude), nbl_sigs))
 
 ```
 
@@ -198,7 +199,7 @@ This step will take some time.
 ```{r run COSMIC V2 and V3.2 Signatures}
 # determine the signatures contributing to each samples
 
-cosm_types <- list("v3.2_dbs" = cosmic_dbs_3.2, "v2_sbs" = cosmic_sbs_2, "v3.2_sbs_nbl" = cosmic_sbs_3.2, "v3.2_sbs_39" = cosmic_sbs_3.2)
+cosm_types <- list("v3.2_dbs" = cosmic_dbs_3.2, "v2_sbs" = cosmic_sbs_2, "v3.2_sbs_nbl_22" = cosmic_sbs_3.2, "v3.2_sbs_nbl_39" = cosmic_sbs_3.2)
 
   for (sig_type in names(cosm_types)) {
   
@@ -216,16 +217,16 @@ cosm_types <- list("v3.2_dbs" = cosmic_dbs_3.2, "v2_sbs" = cosmic_sbs_2, "v3.2_s
       sig_list <- rownames(cosmic_sbs_2)
     }
 
-    else if (sig_type == "v3.2_sbs_nbl"){
+    else if (sig_type == "v3.2_sbs_nbl_22"){
       sigs_input <- sigs_input_sbs
       normalization <- "genome"
-      sig_list <- nbl_include_sigs
+      sig_list <- nbl_include_sigs_22
     }
     
-    else if (sig_type == "v3.2_sbs_39"){
+    else if (sig_type == "v3.2_sbs_nbl_39"){
       sigs_input <- sigs_input_sbs
       normalization <- "genome"
-      sig_list <- include_sigs
+      sig_list <- nbl_include_sigs_39
       }
     
     
@@ -243,6 +244,7 @@ cosm_types <- list("v3.2_dbs" = cosmic_dbs_3.2, "v2_sbs" = cosmic_sbs_2, "v3.2_s
 
   weights_df <- as.data.frame(sig_result$weights)
   weights_df$Line <- rownames(weights_df)
+  weights_df$Unknown <- sig_result$unknown
   # add vector to a dataframe
   cosmic_weights <- rbind(cosmic_weights, weights_df)
     }
@@ -251,7 +253,7 @@ cosm_types <- list("v3.2_dbs" = cosmic_dbs_3.2, "v2_sbs" = cosmic_sbs_2, "v3.2_s
   names(cosmic_weights) <- gsub("_", " ", names(cosmic_weights), fixed = TRUE)
   cosmic_weights_mod <- cosmic_weights %>%
     arrange(Line) %>%
-  select(Line, 1:ncol(cosmic_weights)-1) %>%
+  select(Line, 1:ncol(cosmic_weights)) %>%
   write_tsv(paste(results_dir, "/", sig_type, "-signature-exposures.tsv", sep = ""))
   print(sig_type)
   print(cosmic_weights_mod)
